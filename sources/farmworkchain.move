@@ -28,6 +28,7 @@ module farm_work_chain::farm_work_chain {
         escrow: Balance<SUI>,
         dispute: bool,
         rating: Option<u64>,
+        status: vector<u8>,
         worker: Option<address>,
         workSubmitted: bool,
         created_at: u64,
@@ -44,7 +45,7 @@ module farm_work_chain::farm_work_chain {
     }
 
     // Public - Entry functions
-    public entry fun create_work(description: vector<u8>, price: u64, clock: &Clock, deadline: vector<u8>, ctx: &mut TxContext) {
+    public entry fun create_work(description: vector<u8>, price: u64, clock: &Clock, deadline: vector<u8>, open: vector<u8>, ctx: &mut TxContext) {
         
         let work_id = object::new(ctx);
         transfer::share_object(FarmWork {
@@ -53,6 +54,7 @@ module farm_work_chain::farm_work_chain {
             worker: none(), // Set to an initial value, can be updated later
             description: description,
             rating: none(),
+            status: open,
             price: price,
             escrow: balance::zero(),
             workSubmitted: false,
@@ -71,7 +73,7 @@ module farm_work_chain::farm_work_chain {
         assert!(contains(&work.worker, &tx_context::sender(ctx)), EInvalidWork);
         work.workSubmitted = true;
     }
-
+    
     public entry fun dispute_work(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), EDispute);
         work.dispute = true;
@@ -141,6 +143,11 @@ module farm_work_chain::farm_work_chain {
         work.price = new_price;
     }
 
+    public entry fun update_work_deadline(work: &mut FarmWork, new_deadline: vector<u8>, ctx: &mut TxContext) {
+        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
+        work.deadline = new_deadline;
+    }
+    
     // New functions
     public entry fun add_funds_to_work(work: &mut FarmWork, amount: Coin<SUI>, ctx: &mut TxContext) {
         assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
