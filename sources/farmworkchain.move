@@ -44,6 +44,14 @@ module farm_work_chain::farm_work_chain {
         work.price
     }
 
+    public entry fun get_work_status(work: &FarmWork): vector<u8> {
+        work.status
+    }
+
+    public entry fun get_work_deadline(work: &FarmWork): vector<u8> {
+        work.deadline
+    }
+
     // Public - Entry functions
     public entry fun create_work(description: vector<u8>, price: u64, clock: &Clock, deadline: vector<u8>, open: vector<u8>, ctx: &mut TxContext) {
         
@@ -93,7 +101,7 @@ module farm_work_chain::farm_work_chain {
             // Refund funds to the farmer
             transfer::public_transfer(escrow_coin, work.farmer);
         };
-
+        
         // Reset work state
         work.worker = none();
         work.workSubmitted = false;
@@ -116,7 +124,6 @@ module farm_work_chain::farm_work_chain {
         work.dispute = false;
     }
 
-    // Additional functions
     public entry fun cancel_work(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx) || contains(&work.worker, &tx_context::sender(ctx)), ENotworker);
         
@@ -126,12 +133,19 @@ module farm_work_chain::farm_work_chain {
             let escrow_coin = coin::take(&mut work.escrow, escrow_amount, ctx);
             transfer::public_transfer(escrow_coin, work.farmer);
         };
-
+        
         // Reset work state
         work.worker = none();
         work.workSubmitted = false;
         work.dispute = false;
     }
+
+    // Rate the worker
+    public entry fun rate_worker(work: &mut FarmWork, rating: u64, ctx: &mut TxContext) {
+        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
+        work.rating = some(rating);
+    }
+
 
     public entry fun update_work_description(work: &mut FarmWork, new_description: vector<u8>, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), ENotworker);
@@ -147,8 +161,12 @@ module farm_work_chain::farm_work_chain {
         assert!(work.farmer == tx_context::sender(ctx), ENotworker);
         work.deadline = new_deadline;
     }
-    
-    // New functions
+
+    public entry fun update_work_status(work: &mut FarmWork, completed: vector<u8>, ctx: &mut TxContext) {
+        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
+        work.status = completed;
+    }
+   
     public entry fun add_funds_to_work(work: &mut FarmWork, amount: Coin<SUI>, ctx: &mut TxContext) {
         assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
         let added_balance = coin::into_balance(amount);
