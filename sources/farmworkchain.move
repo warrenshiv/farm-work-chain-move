@@ -1,4 +1,4 @@
-module freelance_marketplace::freelance_marketplace {
+module farm_work_chain::farm_work_chain {
 
     // Imports
     use sui::transfer;
