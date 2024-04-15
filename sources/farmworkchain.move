@@ -31,7 +31,7 @@ module farm_work_chain::farm_work_chain {
         worker: Option<address>,
         workSubmitted: bool,
         created_at: u64,
-        deadline: Option<u64>,
+        deadline: vector<u8>,
     }
     
     // Accessors
@@ -44,7 +44,7 @@ module farm_work_chain::farm_work_chain {
     }
 
     // Public - Entry functions
-    public entry fun create_work(description: vector<u8>, price: u64, clock: &Clock, ctx: &mut TxContext) {
+    public entry fun create_work(description: vector<u8>, price: u64, clock: &Clock, deadline: vector<u8>, ctx: &mut TxContext) {
         
         let work_id = object::new(ctx);
         transfer::share_object(FarmWork {
@@ -58,10 +58,10 @@ module farm_work_chain::farm_work_chain {
             workSubmitted: false,
             dispute: false,
             created_at: clock::timestamp_ms(clock),
-            deadline: none(),
+            deadline: deadline,
         });
     }
-
+    
     public entry fun hire_worker(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(!is_some(&work.worker), EInvalidBid);
         work.worker = some(tx_context::sender(ctx));
