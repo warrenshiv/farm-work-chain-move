@@ -18,6 +18,7 @@ module farm_work_chain::farm_work_chain {
     const ENotworker: u64 = 5;
     const EInvalidWithdrawal: u64 = 6;
     // const EDeadlinePassed: u64 = 7;
+    //  const EInsufficientEscrow: u64 = 8;
     
     // Struct definitions
     struct FarmWork has key, store {
@@ -33,6 +34,7 @@ module farm_work_chain::farm_work_chain {
         workSubmitted: bool,
         created_at: u64,
         deadline: vector<u8>,
+        // change_history: vector<vector<u8>>
     }
     
     // Accessors
@@ -69,6 +71,7 @@ module farm_work_chain::farm_work_chain {
             dispute: false,
             created_at: clock::timestamp_ms(clock),
             deadline: deadline,
+            // change_history: vector::empty()
         });
     }
     
@@ -107,7 +110,7 @@ module farm_work_chain::farm_work_chain {
         work.workSubmitted = false;
         work.dispute = false;
     }
-
+    
     public entry fun release_payment(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), ENotworker);
         assert!(work.workSubmitted && !work.dispute, EInvalidWork);
@@ -122,6 +125,13 @@ module farm_work_chain::farm_work_chain {
         work.worker = none();
         work.workSubmitted = false;
         work.dispute = false;
+    }
+
+    // Add more cash at escrow
+    public entry fun add_funds(work: &mut FarmWork, amount: Coin<SUI>, ctx: &mut TxContext) {
+        assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
+        let added_balance = coin::into_balance(amount);
+        balance::join(&mut work.escrow, added_balance);
     }
 
     public entry fun cancel_work(work: &mut FarmWork, ctx: &mut TxContext) {
