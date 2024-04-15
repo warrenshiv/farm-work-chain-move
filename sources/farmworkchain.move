@@ -4,6 +4,7 @@ module farm_work_chain::farm_work_chain {
     use sui::transfer;
     use sui::sui::SUI;
     use sui::coin::{Self, Coin};
+    use sui::clock::{Self, Clock};
     use sui::object::{Self, UID};
     use sui::balance::{Self, Balance};
     use sui::tx_context::{Self, TxContext};
@@ -15,7 +16,8 @@ module farm_work_chain::farm_work_chain {
     const EDispute: u64 = 3;
     const EAlreadyResolved: u64 = 4;
     const ENotworker: u64 = 5;
-    const EInvalidWithdrawal: u64 = 7;
+    const EInvalidWithdrawal: u64 = 6;
+    // const EDeadlinePassed: u64 = 7;
     
     // Struct definitions
     struct FarmWork has key, store {
@@ -23,14 +25,14 @@ module farm_work_chain::farm_work_chain {
         farmer: address,
         description: vector<u8>,
         price: u64,
-        deadline: u64,
         escrow: Balance<SUI>,
         dispute: bool,
+        rating: Option<u64>,
         worker: Option<address>,
         workSubmitted: bool,
+        created_at: u64,
+        deadline: Option<u64>,
     }
-
-    // Module initializer
     
     // Accessors
     public entry fun get_work_description(work: &FarmWork): vector<u8> {
@@ -42,7 +44,7 @@ module farm_work_chain::farm_work_chain {
     }
 
     // Public - Entry functions
-    public entry fun create_work(description: vector<u8>, price: u64, ctx: &mut TxContext) {
+    public entry fun create_work(description: vector<u8>, price: u64, clock: &Clock, ctx: &mut TxContext) {
         
         let work_id = object::new(ctx);
         transfer::share_object(FarmWork {
@@ -50,11 +52,13 @@ module farm_work_chain::farm_work_chain {
             farmer: tx_context::sender(ctx),
             worker: none(), // Set to an initial value, can be updated later
             description: description,
-            deadline: 0, // Set to an initial value, can be updated later
+            rating: none(),
             price: price,
             escrow: balance::zero(),
             workSubmitted: false,
             dispute: false,
+            created_at: clock::timestamp_ms(clock),
+            deadline: none(),
         });
     }
 
@@ -62,7 +66,7 @@ module farm_work_chain::farm_work_chain {
         assert!(!is_some(&work.worker), EInvalidBid);
         work.worker = some(tx_context::sender(ctx));
     }
-
+    
     public entry fun submit_work(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(contains(&work.worker, &tx_context::sender(ctx)), EInvalidWork);
         work.workSubmitted = true;
@@ -72,7 +76,7 @@ module farm_work_chain::farm_work_chain {
         assert!(work.farmer == tx_context::sender(ctx), EDispute);
         work.dispute = true;
     }
-
+    
     public entry fun resolve_dispute(work: &mut FarmWork, resolved: bool, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), EDispute);
         assert!(work.dispute, EAlreadyResolved);
@@ -157,21 +161,10 @@ module farm_work_chain::farm_work_chain {
         work.workSubmitted = false;
         work.dispute = false;
     }
-    
-    // public entry fun update_work_deadline(work: &mut FarmWork, new_deadline: u64, ctx: &mut TxContext) {
-    //     assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
-    //     // Additional logic to update the work's deadline
-    // }
 
     public entry fun mark_work_complete(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(contains(&work.worker, &tx_context::sender(ctx)), ENotworker);
         work.workSubmitted = true;
-        // Additional logic to mark the work as complete
     }
     
-    // public entry fun extend_dispute_period(work: &mut FarmWork, extension_days: u64, ctx: &mut TxContext) {
-    //     assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
-    //     assert!(work.dispute, EInvalidUpdate);
-    //     // Additional logic to extend the dispute period
-    // }
 }
