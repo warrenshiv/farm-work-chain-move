@@ -76,22 +76,26 @@ module farm_work_chain::farm_work_chain {
         });
     }
     
+    // Bid for work
     public entry fun hire_worker(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(!is_some(&work.worker), EInvalidBid);
         work.worker = some(tx_context::sender(ctx));
     }
     
+    // Submit work
     public entry fun submit_work(work: &mut FarmWork, clock: &Clock, ctx: &mut TxContext) {
         assert!(contains(&work.worker, &tx_context::sender(ctx)), EInvalidWork);
         assert!(clock::timestamp_ms(clock) < work.deadline, EDeadlinePassed);
         work.workSubmitted = true;
     }
     
+    // Raise a dispute
     public entry fun dispute_work(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), EDispute);
         work.dispute = true;
     }
     
+    // Resolve dispute if any between farmer and worker
     public entry fun resolve_dispute(work: &mut FarmWork, resolved: bool, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), EDispute);
         assert!(work.dispute, EAlreadyResolved);
@@ -113,9 +117,11 @@ module farm_work_chain::farm_work_chain {
         work.dispute = false;
     }
     
-    public entry fun release_payment(work: &mut FarmWork, ctx: &mut TxContext) {
+    // Release payment to the worker after work is completed
+    public entry fun release_payment(work: &mut FarmWork, clock: &Clock, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), ENotworker);
         assert!(work.workSubmitted && !work.dispute, EInvalidWork);
+        assert!(clock::timestamp_ms(clock) > work.deadline, EDeadlinePassed);
         assert!(is_some(&work.worker), EInvalidBid);
         let worker = *borrow(&work.worker);
         let escrow_amount = balance::value(&work.escrow);
@@ -135,7 +141,8 @@ module farm_work_chain::farm_work_chain {
         let added_balance = coin::into_balance(amount);
         balance::join(&mut work.escrow, added_balance);
     }
-
+    
+    // Cancel work
     public entry fun cancel_work(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx) || contains(&work.worker, &tx_context::sender(ctx)), ENotworker);
         
@@ -158,12 +165,13 @@ module farm_work_chain::farm_work_chain {
         work.rating = some(rating);
     }
     
-
+    // Update work description
     public entry fun update_work_description(work: &mut FarmWork, new_description: vector<u8>, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), ENotworker);
         work.description = new_description;
     }
-
+    
+    // Update work price
     public entry fun update_work_price(work: &mut FarmWork, new_price: u64, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), ENotworker);
         work.price = new_price;
@@ -174,18 +182,22 @@ module farm_work_chain::farm_work_chain {
         assert!(work.farmer == tx_context::sender(ctx), ENotworker);
         work.deadline = new_deadline;
     }
-
+    
+    // Update work status
     public entry fun update_work_status(work: &mut FarmWork, completed: vector<u8>, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), ENotworker);
         work.status = completed;
     }
-   
+
+    // Add more cash at escrow
     public entry fun add_funds_to_work(work: &mut FarmWork, amount: Coin<SUI>, ctx: &mut TxContext) {
         assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
         let added_balance = coin::into_balance(amount);
         balance::join(&mut work.escrow, added_balance);
     }
+    
 
+    // Withdraw funds from escrow
     public entry fun request_refund(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
         assert!(work.workSubmitted == false, EInvalidWithdrawal);
@@ -199,7 +211,8 @@ module farm_work_chain::farm_work_chain {
         work.workSubmitted = false;
         work.dispute = false;
     }
-
+    
+    // Mark work as complete
     public entry fun mark_work_complete(work: &mut FarmWork, ctx: &mut TxContext) {
         assert!(contains(&work.worker, &tx_context::sender(ctx)), ENotworker);
         work.workSubmitted = true;
