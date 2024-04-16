@@ -25,6 +25,8 @@ module farm_work_chain::farm_work_chain {
         id: UID,
         farmer: address,
         description: vector<u8>,
+        required_skills: vector<u8>,
+        category: vector<u8>,
         price: u64,
         escrow: Balance<SUI>,
         dispute: bool,
@@ -34,7 +36,6 @@ module farm_work_chain::farm_work_chain {
         workSubmitted: bool,
         created_at: u64,
         deadline: u64,
-        // change_history: vector<vector<u8>>
     }
     
     // Accessors
@@ -55,7 +56,7 @@ module farm_work_chain::farm_work_chain {
     }
 
     // Public - Entry functions
-    public entry fun create_work(description: vector<u8>, price: u64, clock: &Clock, duration: u64, open: vector<u8>, ctx: &mut TxContext) {
+    public entry fun create_work(description: vector<u8>, category: vector<u8>, required_skills: vector<u8>,  price: u64, clock: &Clock, duration: u64, open: vector<u8>, ctx: &mut TxContext) {
         
         let work_id = object::new(ctx);
         let deadline = clock::timestamp_ms(clock) + duration;
@@ -64,6 +65,8 @@ module farm_work_chain::farm_work_chain {
             farmer: tx_context::sender(ctx),
             worker: none(), // Set to an initial value, can be updated later
             description: description,
+            required_skills: required_skills,
+            category: category,
             rating: none(),
             status: open,
             price: price,
@@ -72,7 +75,6 @@ module farm_work_chain::farm_work_chain {
             dispute: false,
             created_at: clock::timestamp_ms(clock),
             deadline: deadline,
-            // change_history: vector::empty()
         });
     }
     
