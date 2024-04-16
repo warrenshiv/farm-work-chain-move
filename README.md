@@ -23,7 +23,7 @@ The `farm_work_chain` module on the Sui blockchain platform is engineered to str
    - [Creating Work Contracts](#create_work-)
    - [Bidding and Work hire worker](#hire_worker-)
    - [Work Submission](#submit_work-)
-   - [Dispute Resolution](#resolve_dispute-)
+   - [Dispute Resolution](#resolve_dispute-%EF%B8%8F)
    - [Payment Release and Cancellation](#release_payment-)
    - [Cancellation](#cancel_work-)
    - [Add funds to escrow](#add_funds-)
