@@ -18,7 +18,7 @@ module farm_work_chain::farm_work_chain {
     const ENotworker: u64 = 5;
     const EInvalidWithdrawal: u64 = 6;
     const EDeadlinePassed: u64 = 7;
-    //  const EInsufficientEscrow: u64 = 8;
+     const EInsufficientEscrow: u64 = 8;
     
     // Struct definitions
     struct FarmWork has key, store {
@@ -88,6 +88,12 @@ module farm_work_chain::farm_work_chain {
         assert!(clock::timestamp_ms(clock) < work.deadline, EDeadlinePassed);
         work.workSubmitted = true;
     }
+
+    // Mark work as complete
+    public entry fun mark_work_complete(work: &mut FarmWork, ctx: &mut TxContext) {
+        assert!(contains(&work.worker, &tx_context::sender(ctx)), ENotworker);
+        work.workSubmitted = true;
+    }
     
     // Raise a dispute
     public entry fun dispute_work(work: &mut FarmWork, ctx: &mut TxContext) {
@@ -125,6 +131,7 @@ module farm_work_chain::farm_work_chain {
         assert!(is_some(&work.worker), EInvalidBid);
         let worker = *borrow(&work.worker);
         let escrow_amount = balance::value(&work.escrow);
+        assert!(escrow_amount > 0, EInsufficientEscrow); // Ensure there are enough funds in escrow
         let escrow_coin = coin::take(&mut work.escrow, escrow_amount, ctx);
         // Transfer funds to the worker
         transfer::public_transfer(escrow_coin, worker);
@@ -189,7 +196,7 @@ module farm_work_chain::farm_work_chain {
         work.status = completed;
     }
 
-    // Add more cash at escrow
+    // Add more cash to escrow
     public entry fun add_funds_to_work(work: &mut FarmWork, amount: Coin<SUI>, ctx: &mut TxContext) {
         assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
         let added_balance = coin::into_balance(amount);
@@ -210,12 +217,6 @@ module farm_work_chain::farm_work_chain {
         work.worker = none();
         work.workSubmitted = false;
         work.dispute = false;
-    }
-    
-    // Mark work as complete
-    public entry fun mark_work_complete(work: &mut FarmWork, ctx: &mut TxContext) {
-        assert!(contains(&work.worker, &tx_context::sender(ctx)), ENotworker);
-        work.workSubmitted = true;
     }
     
 }
