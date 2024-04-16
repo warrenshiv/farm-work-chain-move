@@ -20,14 +20,14 @@ The `farm_work_chain` module on the Sui blockchain platform is engineered to str
    - [WorkRecord](#workRecord)
    - [Errors](errors)
 9. [Core Functionalities](#core-functionalities)
-   - [Creating Work Contracts](#create-work)
-   - [Bidding and Work hire worker](#hire-worker)
-   - [Work Submission](#submit-work)
-   - [Dispute Resolution](#resolve-dispute)
-   - [Payment Release and Cancellation](#release-payment)
-   - [Cancellation](#cancel_work)
-   - [Add funds to escrow](#add-funds)
-   - [Update Work Details](#update-work-details)
+   - [Creating Work Contracts](##create-work)
+   - [Bidding and Work hire worker](##hire-worker)
+   - [Work Submission](##submit-work)
+   - [Dispute Resolution](##resolve-dispute)
+   - [Payment Release and Cancellation](##release-payment)
+   - [Cancellation](##cancel_work)
+   - [Add funds to escrow](##add-funds)
+   - [Update Work Details](##update-work-details)
 
 ## Prerequisites
 1. Install dependencies by running the following commands:
