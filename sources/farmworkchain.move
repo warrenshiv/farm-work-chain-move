@@ -18,7 +18,7 @@ module farm_work_chain::farm_work_chain {
     const ENotworker: u64 = 5;
     const EInvalidWithdrawal: u64 = 6;
     const EDeadlinePassed: u64 = 7;
-     const EInsufficientEscrow: u64 = 8;
+    const EInsufficientEscrow: u64 = 8;
     
     // Struct definitions
 
