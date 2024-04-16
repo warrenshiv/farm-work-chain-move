@@ -6,7 +6,7 @@ The `farm_work_chain` module on the Sui blockchain platform is engineered to str
 
 ## Table of Contents
 
-1. [Installation and Deployment](#installation-and-deployment)
+1. [Installation](#installation)
 2. [Features](#features)
 3. [Usage](#usage)
    - [Creating Work Contracts](#creating-work-contracts)
