@@ -15,14 +15,7 @@ module farm_work_chain::farm_work_chain {
     use std::vector::{Self};
     
     // Errors
-    const EInvalidBid: u64 = 1;
-    const EInvalidWork: u64 = 2;
-    const EDispute: u64 = 3;
-    const EAlreadyResolved: u64 = 4;
-    const ENotworker: u64 = 5;
-    const EInvalidWithdrawal: u64 = 6;
-    const EDeadlinePassed: u64 = 7;
-    const EInsufficientEscrow: u64 = 8;
+    const ERROR_INVALID_SKILL: u64 = 0;
     
     // Struct definitions
 
@@ -52,7 +45,7 @@ module farm_work_chain::farm_work_chain {
 
     struct Worker has key, store {
         id: UID,
-        farm: ID,
+        farm_id: ID,
         owner: address,
         description: String,
         skills: vector<String>
@@ -78,7 +71,7 @@ module farm_work_chain::farm_work_chain {
     // Public - Entry functions
 
     // Create a new work
-    public entry fun create_work(
+    public entry fun new_farm(
         c: &Clock, 
         description_: String,
         category_: String,
@@ -110,6 +103,26 @@ module farm_work_chain::farm_work_chain {
         });
 
         transfer::transfer(FarmWorkCap{id: object::new(ctx), farm_id: inner_}, sender(ctx));
+    }
+    // Users should create new worker for bid 
+    public fun new_worker(farm: ID, description_: String, ctx: &mut TxContext) : Worker {
+        let worker = Worker {
+            id: object::new(ctx),
+            farm_id: farm,
+            owner: sender(ctx),
+            description: description_,
+            skills: vector::empty()
+        };
+        worker
+    }
+    // users can set new skills
+    public fun add_skill(self: &mut Worker, skill: String) {
+        assert!(!vector::contains(&self.skills, &skill), ERROR_INVALID_SKILL);
+        vector::push_back(&mut self.skills, skill);
+    }
+    // users can bid to works
+    public fun bid_work(farm: &mut FarmWork, worker: Worker, ctx: &mut TxContext) {
+        table::add(&mut farm.workers, sender(ctx), worker);
     }
     
     // // Bid for work
