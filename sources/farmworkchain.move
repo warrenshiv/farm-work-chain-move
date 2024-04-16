@@ -8,6 +8,7 @@ module farm_work_chain::farm_work_chain {
     use sui::object::{Self, UID, ID};
     use sui::balance::{Self, Balance};
     use sui::tx_context::{Self, TxContext, sender};
+    use sui::table::{Self, Table};
 
     use std::option::{Option, none, some, is_some, contains, borrow};
     use std::string::{Self, String};
@@ -29,6 +30,7 @@ module farm_work_chain::farm_work_chain {
     struct FarmWork has key, store {
         id: UID,
         inner: ID,
+        workers: Table<address, Worker>,
         description: String,
         required_skills: vector<String>,
         category: String,
@@ -92,6 +94,7 @@ module farm_work_chain::farm_work_chain {
         transfer::share_object(FarmWork {
             id: id_,
             inner: inner_,
+            workers: table::new(ctx),
             description: description_,
             required_skills: vector::empty(),
             category: category_,
