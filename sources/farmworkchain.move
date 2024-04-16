@@ -4,265 +4,219 @@ module farm_work_chain::farm_work_chain {
     use sui::transfer;
     use sui::sui::SUI;
     use sui::coin::{Self, Coin};
-    use sui::clock::{Self, Clock};
-    use sui::object::{Self, UID};
+    use sui::clock::{Self, Clock, timestamp_ms};
+    use sui::object::{Self, UID, ID};
     use sui::balance::{Self, Balance};
-    use sui::tx_context::{Self, TxContext};
+    use sui::tx_context::{Self, TxContext, sender};
+    use sui::table::{Self, Table};
+
     use std::option::{Option, none, some, is_some, contains, borrow};
+    use std::string::{Self, String};
+    use std::vector::{Self};
     
     // Errors
-    const EInvalidBid: u64 = 1;
-    const EInvalidWork: u64 = 2;
-    const EDispute: u64 = 3;
-    const EAlreadyResolved: u64 = 4;
-    const ENotworker: u64 = 5;
-    const EInvalidWithdrawal: u64 = 6;
-    const EDeadlinePassed: u64 = 7;
-    const EInsufficientEscrow: u64 = 8;
-    
+    const ERROR_INVALID_SKILL: u64 = 0;
+    const ERROR_FARM_CLOSED: u64 = 1;
+    const ERROR_INVALID_CAP :u64 = 2;
+    const ERROR_INSUFFCIENT_FUNDS :u64 = 3;
+    const ERROR_WORK_NOT_SUBMIT :u64 = 4;
+    const ERROR_WRONG_ADDRESS :u64 = 5;
+    const ERROR_TIME_IS_UP :u64 = 6;
+    const ERROR_INCORRECT_LEASER: u64 = 7;
+    const ERROR_DISPUTE_FALSE: u64 = 7;
+
     // Struct definitions
 
     // FarmWork struct
     struct FarmWork has key, store {
         id: UID,
-        farmer: address,
-        description: vector<u8>,
-        required_skills: vector<u8>,
-        category: vector<u8>,
+        inner: ID,
+        owner: address,
+        workers: Table<address, Worker>,
+        description: String,
+        required_skills: vector<String>,
+        category: String,
         price: u64,
-        escrow: Balance<SUI>,
+        pay: Balance<SUI>,
         dispute: bool,
         rating: Option<u64>,
-        status: vector<u8>,
+        status: bool,
         worker: Option<address>,
         workSubmitted: bool,
         created_at: u64,
         deadline: u64,
     }
 
-    // WorkRecord struct
-    struct WorkRecord has key, store {
+    struct FarmWorkCap has key {
         id: UID,
-        farmer: address,
-        review: vector<u8>,
+        farm_id: ID
+    }
+
+    struct Worker has key, store {
+        id: UID,
+        farm_id: ID,
+        owner: address,
+        description: String,
+        skills: vector<String>
+    }
+
+    struct Complaint has key, store {
+        id: UID,
+        worker: address,
+        farm_owner: address,
+        reason: String,
+        decision: bool,
+    }
+
+    struct AdminCap has key {id: UID}
+
+    fun init(ctx: &mut TxContext) {
+        transfer::transfer(AdminCap{id: object::new(ctx)}, sender(ctx));
     }
     
     // Accessors
-    public entry fun get_work_description(work: &FarmWork): vector<u8> {
+    public fun get_work_description(work: &FarmWork): String {
         work.description
     }
 
-    public entry fun get_work_price(work: &FarmWork): u64 {
+    public fun get_work_price(work: &FarmWork): u64 {
         work.price
     }
 
-    public entry fun get_work_status(work: &FarmWork): vector<u8> {
+    public fun get_work_status(work: &FarmWork): bool {
         work.status
     }
 
-    public entry fun get_work_deadline(work: &FarmWork): u64 {
+    public fun get_work_deadline(work: &FarmWork): u64 {
         work.deadline
     }
 
     // Public - Entry functions
 
     // Create a new work
-    public entry fun create_work(description: vector<u8>, category: vector<u8>, required_skills: vector<u8>,  price: u64, clock: &Clock, duration: u64, open: vector<u8>, ctx: &mut TxContext) {
-        
-        let work_id = object::new(ctx);
-        let deadline = clock::timestamp_ms(clock) + duration;
+    public entry fun new_farm(
+        c: &Clock, 
+        description_: String,
+        category_: String,
+        price_: u64, 
+        duration_: u64, 
+        ctx: &mut TxContext
+        ) {
+        let id_ = object::new(ctx);
+        let inner_ = object::uid_to_inner(&id_);
+        let deadline_ = timestamp_ms(c) + duration_;
+
         transfer::share_object(FarmWork {
-            id: work_id,
-            farmer: tx_context::sender(ctx),
-            worker: none(), // Set to an initial value, can be updated later
-            description: description,
-            required_skills: required_skills,
-            category: category,
-            rating: none(),
-            status: open,
-            price: price,
-            escrow: balance::zero(),
-            workSubmitted: false,
+            id: id_,
+            inner: inner_,
+            owner: sender(ctx),
+            workers: table::new(ctx),
+            description: description_,
+            required_skills: vector::empty(),
+            category: category_,
+            price: price_,
+            pay: balance::zero(),
             dispute: false,
-            created_at: clock::timestamp_ms(clock),
-            deadline: deadline,
+            rating: none(),
+            status: false,
+            worker: none(),
+            workSubmitted: false,
+            created_at: timestamp_ms(c),
+            deadline: deadline_
         });
-    }
-    
-    // Bid for work
-    public entry fun hire_worker(work: &mut FarmWork, ctx: &mut TxContext) {
-        assert!(!is_some(&work.worker), EInvalidBid);
-        work.worker = some(tx_context::sender(ctx));
-    }
-    
-    // Submit work
-    public entry fun submit_work(work: &mut FarmWork, clock: &Clock, ctx: &mut TxContext) {
-        assert!(contains(&work.worker, &tx_context::sender(ctx)), EInvalidWork);
-        assert!(clock::timestamp_ms(clock) < work.deadline, EDeadlinePassed);
-        work.workSubmitted = true;
-    }
 
-    // Mark work as complete
-    public entry fun mark_work_complete(work: &mut FarmWork, ctx: &mut TxContext) {
-        assert!(contains(&work.worker, &tx_context::sender(ctx)), ENotworker);
-        work.workSubmitted = true;
+        transfer::transfer(FarmWorkCap{id: object::new(ctx), farm_id: inner_}, sender(ctx));
     }
-    
-    // Raise a dispute
-    public entry fun dispute_work(work: &mut FarmWork, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx), EDispute);
-        work.dispute = true;
-    }
-    
-    // Resolve dispute if any between farmer and worker
-    public entry fun resolve_dispute(work: &mut FarmWork, resolved: bool, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx), EDispute);
-        assert!(work.dispute, EAlreadyResolved);
-        assert!(is_some(&work.worker), EInvalidBid);
-        let escrow_amount = balance::value(&work.escrow);
-        let escrow_coin = coin::take(&mut work.escrow, escrow_amount, ctx);
-        if (resolved) {
-            let worker = *borrow(&work.worker);
-            // Transfer funds to the worker
-            transfer::public_transfer(escrow_coin, worker);
-        } else {
-            // Refund funds to the farmer
-            transfer::public_transfer(escrow_coin, work.farmer);
-        };
-        
-        // Reset work state
-        work.worker = none();
-        work.workSubmitted = false;
-        work.dispute = false;
-    }
-    
-    // Release payment to the worker after work is completed
-    public entry fun release_payment(work: &mut FarmWork, clock: &Clock, review: vector<u8>, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
-        assert!(work.workSubmitted && !work.dispute, EInvalidWork);
-        assert!(clock::timestamp_ms(clock) > work.deadline, EDeadlinePassed);
-        assert!(is_some(&work.worker), EInvalidBid);
-        let worker = *borrow(&work.worker);
-        let escrow_amount = balance::value(&work.escrow);
-        assert!(escrow_amount > 0, EInsufficientEscrow); // Ensure there are enough funds in escrow
-        let escrow_coin = coin::take(&mut work.escrow, escrow_amount, ctx);
-        // Transfer funds to the worker
-        transfer::public_transfer(escrow_coin, worker);
-
-        // Create a new work record
-        let workRecord = WorkRecord {
+    // Users should create new worker for bid 
+    public fun new_worker(farm: ID, description_: String, ctx: &mut TxContext) : Worker {
+        let worker = Worker {
             id: object::new(ctx),
-            farmer: tx_context::sender(ctx),
-            review: review,
+            farm_id: farm,
+            owner: sender(ctx),
+            description: description_,
+            skills: vector::empty()
         };
+        worker
+    }
+    // users can set new skills
+    public fun add_skill(self: &mut Worker, skill: String) {
+        assert!(!vector::contains(&self.skills, &skill), ERROR_INVALID_SKILL);
+        vector::push_back(&mut self.skills, skill);
+    }
+    // users can bid to works
+    public fun bid_work(farm: &mut FarmWork, worker: Worker, ctx: &mut TxContext) {
+        assert!(!farm.status, ERROR_FARM_CLOSED);
+        table::add(&mut farm.workers, sender(ctx), worker);
+    }
+    // farmwork owner should choose worker and send to worker object to choosen.
+    public fun choose(cap: &FarmWorkCap, farm: &mut FarmWork, coin: Coin<SUI>, choosen: address) : Worker {
+        assert!(cap.farm_id == object::id(farm), ERROR_INVALID_CAP);
+        assert!(coin::value(&coin) >= farm.price, ERROR_INSUFFCIENT_FUNDS);
 
-        // Change accessiblity of work record
-        transfer::public_transfer(workRecord, tx_context::sender(ctx));
-
-        // Reset work state
-        work.worker = none();
-        work.workSubmitted = false;
-        work.dispute = false;
+        let worker = table::remove(&mut farm.workers, choosen);
+        let balance_ = coin::into_balance(coin);
+        // submit the worker balance 
+        balance::join(&mut farm.pay, balance_);
+        // farm closed. 
+        farm.status = true;
+        // set the worker address 
+        farm.worker = some(choosen);
+        worker
     }
 
-    // Add more cash at escrow
-    public entry fun add_funds(work: &mut FarmWork, amount: Coin<SUI>, ctx: &mut TxContext) {
-        assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
-        let added_balance = coin::into_balance(amount);
-        balance::join(&mut work.escrow, added_balance);
+    public fun submit_work(self: &mut FarmWork, c:&Clock, ctx: &mut TxContext) {
+        assert!(timestamp_ms(c) < self.deadline, ERROR_TIME_IS_UP);
+        assert!(*borrow(&self.worker) == sender(ctx), ERROR_WRONG_ADDRESS);
+        self.workSubmitted = true;
     }
-    
-    // Cancel work
-    public entry fun cancel_work(work: &mut FarmWork, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx) || contains(&work.worker, &tx_context::sender(ctx)), ENotworker);
+
+    public fun confirm_work(cap: &FarmWorkCap, self: &mut FarmWork, ctx: &mut TxContext) {
+        assert!(cap.farm_id == object::id(self), ERROR_INVALID_CAP);
+        assert!(self.workSubmitted, ERROR_WORK_NOT_SUBMIT);
         
-        // Refund funds to the farmer if not yet paid
-        if (is_some(&work.worker) && !work.workSubmitted && !work.dispute) {
-            let escrow_amount = balance::value(&work.escrow);
-            let escrow_coin = coin::take(&mut work.escrow, escrow_amount, ctx);
-            transfer::public_transfer(escrow_coin, work.farmer);
+        let balance_ = balance::withdraw_all(&mut self.pay);
+        let coin_ = coin::from_balance(balance_, ctx);
+        
+        transfer::public_transfer(coin_, *borrow(&self.worker));
+    }
+    // worker can create new_complain. farmwork owner doesnt need to do it. All he needs wont transfer the price. 
+    public fun new_complain(self: &mut FarmWork, c:&Clock, reason_: String, ctx: &mut TxContext) {
+        assert!(timestamp_ms(c) > self.deadline, ERROR_TIME_IS_UP);
+
+        let leaser = sender(ctx);
+        let owner = self.owner;
+
+        assert!(leaser == sender(ctx) || owner == sender(ctx), ERROR_INCORRECT_LEASER);
+
+        // define the complain
+        let complain_ = Complaint{
+            id: object::new(ctx),
+            worker: sender(ctx),
+            farm_owner: owner,
+            reason: reason_,
+            decision: false,
         };
-        
-        // Reset work state
-        work.worker = none();
-        work.workSubmitted = false;
-        work.dispute = false;
-    }
+        self.dispute = true;
 
-    // Rate the worker
-    public entry fun rate_worker(work: &mut FarmWork, rating: u64, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
-        work.rating = some(rating);
+        transfer::share_object(complain_);
     }
-    
-    // Update work description
-    public entry fun update_work_description(work: &mut FarmWork, new_description: vector<u8>, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
-        work.description = new_description;
-    }
-    
-    // Update work price
-    public entry fun update_work_price(work: &mut FarmWork, new_price: u64, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
-        work.price = new_price;
-    }
+    /// admin must decide to who is right
+    public fun provision(
+        _: &AdminCap,
+        self: &mut FarmWork,
+        complain: &mut Complaint,
+        decision: bool,
+        ctx: &mut TxContext
+    ) {
+        assert!(self.dispute, ERROR_DISPUTE_FALSE);
+        let worker = complain.worker;
+        let farm_owner = complain.farm_owner;
 
-    // Update work category
-    public entry fun update_work_category(work: &mut FarmWork, new_category: vector<u8>, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
-        work.category = new_category;
+        // if admin decide true transfer the worker price. If it is false nothing happen.
+        if(decision == true) { 
+            let balance_ = balance::withdraw_all(&mut self.pay);
+            let coin_ = coin::from_balance(balance_, ctx);
+            transfer::public_transfer(coin_, *borrow(&self.worker));
+        }
     }
-
-    // Update required skills
-    public entry fun update_work_skills(work: &mut FarmWork, new_skills: vector<u8>, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
-        work.required_skills = new_skills;
-    }
-
-    // Update deadline
-    public entry fun update_work_deadline(work: &mut FarmWork, new_deadline: u64, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
-        work.deadline = new_deadline;
-    }
-    
-    // Update work status
-    public entry fun update_work_status(work: &mut FarmWork, completed: vector<u8>, ctx: &mut TxContext) {
-        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
-        work.status = completed;
-    }
-
-    // Add more cash to escrow
-    public entry fun add_funds_to_work(work: &mut FarmWork, amount: Coin<SUI>, ctx: &mut TxContext) {
-        assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
-        let added_balance = coin::into_balance(amount);
-        balance::join(&mut work.escrow, added_balance);
-    }
-    
-
-    // Withdraw funds from escrow
-    public entry fun request_refund(work: &mut FarmWork, ctx: &mut TxContext) {
-        assert!(tx_context::sender(ctx) == work.farmer, ENotworker);
-        assert!(work.workSubmitted == false, EInvalidWithdrawal);
-        let escrow_amount = balance::value(&work.escrow);
-        let escrow_coin = coin::take(&mut work.escrow, escrow_amount, ctx);
-        // Refund funds to the farmer
-        transfer::public_transfer(escrow_coin, work.farmer);
-
-        // Reset work state
-        work.worker = none();
-        work.workSubmitted = false;
-        work.dispute = false;
-    }
-    
-    // // Work matching by skills and category
-    // public entry fun match_work(skills: vector<u8>, category: vector<u8>, ctx: &TxContext): vector<FarmWork> {
-    //     let all_works = object::all::<FarmWork>();
-    //     let mut matched_works = vector<FarmWork>::new();
-    //     for work in all_works {
-    //         if (work.required_skills == skills && work.category == category) {
-    //             matched_works.push(work);
-    //         }
-    //     }
-    //     matched_works
-    // }
 }
