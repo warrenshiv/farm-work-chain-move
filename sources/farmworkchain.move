@@ -21,6 +21,8 @@ module farm_work_chain::farm_work_chain {
      const EInsufficientEscrow: u64 = 8;
     
     // Struct definitions
+
+    // FarmWork struct
     struct FarmWork has key, store {
         id: UID,
         farmer: address,
@@ -36,6 +38,13 @@ module farm_work_chain::farm_work_chain {
         workSubmitted: bool,
         created_at: u64,
         deadline: u64,
+    }
+
+    // WorkRecord struct
+    struct WorkRecord has key, store {
+        id: UID,
+        farmer: address,
+        review: vector<u8>,
     }
     
     // Accessors
@@ -56,6 +65,8 @@ module farm_work_chain::farm_work_chain {
     }
 
     // Public - Entry functions
+
+    // Create a new work
     public entry fun create_work(description: vector<u8>, category: vector<u8>, required_skills: vector<u8>,  price: u64, clock: &Clock, duration: u64, open: vector<u8>, ctx: &mut TxContext) {
         
         let work_id = object::new(ctx);
@@ -126,7 +137,7 @@ module farm_work_chain::farm_work_chain {
     }
     
     // Release payment to the worker after work is completed
-    public entry fun release_payment(work: &mut FarmWork, clock: &Clock, ctx: &mut TxContext) {
+    public entry fun release_payment(work: &mut FarmWork, clock: &Clock, review: vector<u8>, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), ENotworker);
         assert!(work.workSubmitted && !work.dispute, EInvalidWork);
         assert!(clock::timestamp_ms(clock) > work.deadline, EDeadlinePassed);
@@ -137,6 +148,16 @@ module farm_work_chain::farm_work_chain {
         let escrow_coin = coin::take(&mut work.escrow, escrow_amount, ctx);
         // Transfer funds to the worker
         transfer::public_transfer(escrow_coin, worker);
+
+        // Create a new work record
+        let workRecord = WorkRecord {
+            id: object::new(ctx),
+            farmer: tx_context::sender(ctx),
+            review: review,
+        };
+
+        // Change accessiblity of work record
+        transfer::public_transfer(workRecord, tx_context::sender(ctx));
 
         // Reset work state
         work.worker = none();
@@ -234,11 +255,14 @@ module farm_work_chain::farm_work_chain {
     }
     
     // // Work matching by skills and category
-    // public entry fun match_work(work: &FarmWork, skills: vector<u8>, category: vector<u8>) -> bool {
-    //     let required_skills = work.required_skills;
-    //     let work_category = work.category;
-    //     let skills_match = required_skills.iter().all(|skill| skills.contains(skill));
-    //     let category_match = work_category.iter().all(|cat| category.contains(cat));
-    //     skills_match && category_match
+    // public entry fun match_work(skills: vector<u8>, category: vector<u8>, ctx: &TxContext): vector<FarmWork> {
+    //     let all_works = object::all::<FarmWork>();
+    //     let mut matched_works = vector<FarmWork>::new();
+    //     for work in all_works {
+    //         if (work.required_skills == skills && work.category == category) {
+    //             matched_works.push(work);
+    //         }
+    //     }
+    //     matched_works
     // }
 }
