@@ -21,7 +21,9 @@ module farm_work_chain::farm_work_chain {
     const ERROR_INSUFFCIENT_FUNDS :u64 = 3;
     const ERROR_WORK_NOT_SUBMIT :u64 = 4;
     const ERROR_WRONG_ADDRESS :u64 = 5;
-    const ERROR_TIME_IS_UP :u64 = 5;
+    const ERROR_TIME_IS_UP :u64 = 6;
+    const ERROR_INCORRECT_LEASER: u64 = 7;
+    const ERROR_DISPUTE_FALSE: u64 = 7;
 
     // Struct definitions
 
@@ -29,6 +31,7 @@ module farm_work_chain::farm_work_chain {
     struct FarmWork has key, store {
         id: UID,
         inner: ID,
+        owner: address,
         workers: Table<address, Worker>,
         description: String,
         required_skills: vector<String>,
@@ -55,6 +58,20 @@ module farm_work_chain::farm_work_chain {
         owner: address,
         description: String,
         skills: vector<String>
+    }
+
+    struct Complaint has key, store {
+        id: UID,
+        worker: address,
+        farm_owner: address,
+        reason: String,
+        decision: bool,
+    }
+
+    struct AdminCap has key {id: UID}
+
+    fun init(ctx: &mut TxContext) {
+        transfer::transfer(AdminCap{id: object::new(ctx)}, sender(ctx));
     }
     
     // Accessors
@@ -92,6 +109,7 @@ module farm_work_chain::farm_work_chain {
         transfer::share_object(FarmWork {
             id: id_,
             inner: inner_,
+            owner: sender(ctx),
             workers: table::new(ctx),
             description: description_,
             required_skills: vector::empty(),
@@ -160,5 +178,45 @@ module farm_work_chain::farm_work_chain {
         let coin_ = coin::from_balance(balance_, ctx);
         
         transfer::public_transfer(coin_, *borrow(&self.worker));
-    }  
+    }
+    // worker can create new_complain. farmwork owner doesnt need to do it. All he needs wont transfer the price. 
+    public fun new_complain(self: &mut FarmWork, c:&Clock, reason_: String, ctx: &mut TxContext) {
+        assert!(timestamp_ms(c) > self.deadline, ERROR_TIME_IS_UP);
+
+        let leaser = sender(ctx);
+        let owner = self.owner;
+
+        assert!(leaser == sender(ctx) || owner == sender(ctx), ERROR_INCORRECT_LEASER);
+
+        // define the complain
+        let complain_ = Complaint{
+            id: object::new(ctx),
+            worker: sender(ctx),
+            farm_owner: owner,
+            reason: reason_,
+            decision: false,
+        };
+        self.dispute = true;
+
+        transfer::share_object(complain_);
+    }
+    /// admin must decide to who is right
+    public fun provision(
+        _: &AdminCap,
+        self: &mut FarmWork,
+        complain: &mut Complaint,
+        decision: bool,
+        ctx: &mut TxContext
+    ) {
+        assert!(self.dispute, ERROR_DISPUTE_FALSE);
+        let worker = complain.worker;
+        let farm_owner = complain.farm_owner;
+
+        // if admin decide true transfer the worker price. If it is false nothing happen.
+        if(decision == true) { 
+            let balance_ = balance::withdraw_all(&mut self.pay);
+            let coin_ = coin::from_balance(balance_, ctx);
+            transfer::public_transfer(coin_, *borrow(&self.worker));
+        }
+    }
 }
