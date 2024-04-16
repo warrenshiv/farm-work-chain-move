@@ -13,7 +13,12 @@ The `farm_work_chain` module on the Sui blockchain platform is engineered to str
 5. [Create addresses](#create-addresses)
 6. [Get localnet SUI tokens](#get-localnet-SUI-tokens)
 7. [Build and publish a smart contract](#build-and-publish-a-smart-contract)
+   - [Build package](#build-package)
+   - [Publish package](#publish-package)
 8. [Structs](#structs)
+   - [FarmWork](#farmWork)
+   - [WorkRecord](#workRecord)
+   - [Errors](eErrors)
 9. [Functionalities](#functionalities)
 10. [Usage](#usage)
    - [Creating Work Contracts](#creating-work-contracts)
@@ -143,7 +148,7 @@ sui client publish --gas-budget 100000000 --json
 
 ## Structs
 
-1. FarmWork
+### FarmWork
    
    ```
    {
@@ -164,7 +169,7 @@ sui client publish --gas-budget 100000000 --json
    }
    ```
 
-2. WorkRecord
+### WorkRecord
    ```
    {
       id: UID,
@@ -173,7 +178,7 @@ sui client publish --gas-budget 100000000 --json
    }
    ```
 
-## Errors
+### Errors
    
 -  EInvalidBid: u64 = 1;
 -  EInvalidWork: u64 = 2;
