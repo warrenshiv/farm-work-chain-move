@@ -6,18 +6,23 @@ The `farm_work_chain` module on the Sui blockchain platform is engineered to str
 
 ## Table of Contents
 
-1. [Installation](#installation)
-2. [Features](#features)
-3. [Usage](#usage)
+1. [Prerequisites](#prerequisites)
+2. [Installation](#installation)
+3. [Run a local network](#run-a-local-network)
+4. [Configure connectivity to a local node](#configure-connectivity-to-a-local-node)
+5. [Create address](#create-address)
+6. [Get localnet SUI tokens](#get-localnet-SUI-tokens)
+7. [Build and publish a smart contract](#build-and-publish-a-smart-contract)
+8. [Structs](#structs)
+9. [Functionalities](#functionalities)
+10. [Usage](#usage)
    - [Creating Work Contracts](#creating-work-contracts)
    - [Bidding and Work Submission](#bidding-and-work-submission)
    - [Dispute Resolution](#dispute-resolution)
    - [Payment Release and Cancellation](#payment-release-and-cancellation)
    - [Additional Functionality](#additional-functionality)
-4. [Examples](#examples)
-5. [References](#references)
 
-### Prerequisites
+## Prerequisites
 1. Install dependencies by running the following commands:
 
    - `sudo apt update`
@@ -60,7 +65,7 @@ To run a local network with a pre-built binary (recommended way), run this comma
 ```
 RUST_LOG="off,sui_node=info" sui-test-validator
 ```
-### Configure connectivity to a local node
+## Configure connectivity to a local node
 Once the local node is running (using `sui-test-validator`), you should the url of a local node - `http://127.0.0.1:9000` (or similar).
 Also, another url in the output is the url of a local faucet - `http://127.0.0.1:9123`.
 
@@ -119,7 +124,7 @@ sui client active-address
 You can switch to another address by running this command:
 ```
 sui client switch --address <ADDRESS>
-``
+```
 
 ## Build and publish a smart contract
 
@@ -134,6 +139,7 @@ If the package is built successfully, the next step is to publish the package:
 ```
 sui client publish --gas-budget 100000000 --json
 ` - `sui client publish --gas-budget 1000000000`
+```
 
 ## Structs
 
@@ -178,7 +184,7 @@ sui client publish --gas-budget 100000000 --json
 -  EDeadlinePassed: u64 = 7;
 -  EInsufficientEscrow: u64 = 8;
 
-## Core Functionalities
+## Functionalities
 
 ### create_work 🌱
 
