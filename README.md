@@ -10,7 +10,7 @@ The `farm_work_chain` module on the Sui blockchain platform is engineered to str
 2. [Installation](#installation)
 3. [Run a local network](#run-a-local-network)
 4. [Configure connectivity to a local node](#configure-connectivity-to-a-local-node)
-5. [Create address](#create-address)
+5. [Create addresses](#create-addresses)
 6. [Get localnet SUI tokens](#get-localnet-SUI-tokens)
 7. [Build and publish a smart contract](#build-and-publish-a-smart-contract)
 8. [Structs](#structs)
