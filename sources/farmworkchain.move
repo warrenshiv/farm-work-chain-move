@@ -186,6 +186,18 @@ module farm_work_chain::farm_work_chain {
         work.price = new_price;
     }
 
+    // Update work category
+    public entry fun update_work_category(work: &mut FarmWork, new_category: vector<u8>, ctx: &mut TxContext) {
+        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
+        work.category = new_category;
+    }
+
+    // Update required skills
+    public entry fun update_work_skills(work: &mut FarmWork, new_skills: vector<u8>, ctx: &mut TxContext) {
+        assert!(work.farmer == tx_context::sender(ctx), ENotworker);
+        work.required_skills = new_skills;
+    }
+
     // Update deadline
     public entry fun update_work_deadline(work: &mut FarmWork, new_deadline: u64, ctx: &mut TxContext) {
         assert!(work.farmer == tx_context::sender(ctx), ENotworker);
@@ -221,4 +233,12 @@ module farm_work_chain::farm_work_chain {
         work.dispute = false;
     }
     
+    // // Work matching by skills and category
+    // public entry fun match_work(work: &FarmWork, skills: vector<u8>, category: vector<u8>) -> bool {
+    //     let required_skills = work.required_skills;
+    //     let work_category = work.category;
+    //     let skills_match = required_skills.iter().all(|skill| skills.contains(skill));
+    //     let category_match = work_category.iter().all(|cat| category.contains(cat));
+    //     skills_match && category_match
+    // }
 }
