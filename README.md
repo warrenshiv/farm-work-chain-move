@@ -20,7 +20,7 @@ The `farm_work_chain` module on the Sui blockchain platform is engineered to str
    - [WorkRecord](#workRecord)
    - [Errors](#errors)
 9. [Core Functionalities](#core-functionalities)
-   - [Creating Work Contracts](#create-work🌱)
+   - [Creating Work Contracts](#create_work-)
    - [Bidding and Work hire worker](#hire-worker)
    - [Work Submission](#submit-work)
    - [Dispute Resolution](#resolve-dispute)
